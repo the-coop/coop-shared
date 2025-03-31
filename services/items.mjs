@@ -153,6 +153,7 @@ export default class Items {
         // Get the total of that item now.
         const total = await this.count(itemCode);
         
+        
         await this.saveTransaction(userID, itemCode, quantity, total, sourceReason);
 
         return newQty;
