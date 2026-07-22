@@ -18,7 +18,7 @@
   "dependencies": {
     "chance": "^1.1.8",
     "jsonwebtoken": "^8.5.1",
-    "pg": "^8.7.3"
+    "mysql2": "^3.11.0"
   },
   "devDependencies": {},
   "description": ""

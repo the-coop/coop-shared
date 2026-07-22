@@ -8,7 +8,7 @@ export default class Items {
     static async getUserItem(userID, itemCode) {
         const query = {
             name: "get-user-item",
-            text: `SELECT * FROM "items" WHERE owner_id = $1 AND item_code = $2`,
+            text: `SELECT * FROM items WHERE owner_id = ? AND item_code = ?`,
             values: [userID, itemCode]
         };
         return DatabaseHelper.single(await Database.query(query));
@@ -28,14 +28,15 @@ export default class Items {
 
     static async subtract(userID, itemCode, subQuantity, takeReason = 'unknown') {
         // If item count goes to zero, remove it
+        // MySQL has no RETURNING: apply the update, then read the row back.
         const query = {
             name: "subtract-item",
-            text: `UPDATE items 
-                SET quantity = quantity - $3 WHERE owner_id = $1 AND item_code = $2
-                RETURNING quantity`,
-            values: [userID, itemCode, subQuantity]
+            text: `UPDATE items
+                SET quantity = quantity - ? WHERE owner_id = ? AND item_code = ?`,
+            values: [subQuantity, userID, itemCode]
         };
-        const itemRow = await DatabaseHelper.singleQuery(query);
+        await Database.query(query);
+        const itemRow = await this.getUserItem(userID, itemCode);
 
         // Get the total of that item now.
         const total = await this.count(itemCode);
@@ -59,7 +60,7 @@ export default class Items {
     static async count(itemCode) {
         const query = {
             name: "count-item",
-            text: "SELECT SUM(quantity) FROM items WHERE item_code = $1",
+            text: "SELECT SUM(quantity) AS sum FROM items WHERE item_code = ?",
             values: [itemCode]
         };
 
@@ -73,8 +74,8 @@ export default class Items {
         const nowSecs = Math.round(Date.now() / 1000);
         const query = {
             name: "record-item-change",
-            text: `INSERT INTO item_qty_change_history(owner, item, change, running, note, occurred_secs)
-                VALUES($1, $2, $3, $4, $5, $6)`,
+            text: `INSERT INTO item_qty_change_history(owner, item, \`change\`, running, note, occurred_secs)
+                VALUES(?, ?, ?, ?, ?, ?)`,
             values: [userID, item_code, qty, runningQty, reason, nowSecs]
         };  
 
@@ -104,7 +105,11 @@ export default class Items {
                // Delete the last 100.
                try {
                    await Database.query({
-                       text: `DELETE FROM item_qty_change_history WHERE id = any (array(SELECT id FROM item_qty_change_history ORDER BY occurred_secs ASC LIMIT 100))`
+                       text: `DELETE FROM item_qty_change_history WHERE id IN (
+                           SELECT id FROM (
+                               SELECT id FROM item_qty_change_history ORDER BY occurred_secs ASC LIMIT 100
+                           ) AS oldest
+                       )`
                    });
                } catch(e) {
                    console.log('Error clipping item qty change history');
@@ -117,7 +122,7 @@ export default class Items {
     static async getTransactionRowCount() {
         const query = {
             name: "transactions-rows-count",
-            text: `SELECT COUNT(*) FROM item_qty_change_history`
+            text: `SELECT COUNT(*) AS count FROM item_qty_change_history`
         };  
 
         const result = await Database.query(query);
@@ -128,7 +133,7 @@ export default class Items {
     static async delete(userID, itemCode) {
         const query = {
             name: "delete-item",
-            text: "DELETE FROM items WHERE owner_id = $1 AND item_code = $2",
+            text: "DELETE FROM items WHERE owner_id = ? AND item_code = ?",
             values: [userID, itemCode]
         };
         return await Database.query(query);
@@ -139,16 +144,15 @@ export default class Items {
         const query = {
             name: "add-item",
             text: `INSERT INTO items(owner_id, item_code, quantity)
-                VALUES($1, $2, $3) 
-                ON CONFLICT (owner_id, item_code)
-                DO 
-                UPDATE SET quantity = items.quantity + EXCLUDED.quantity
-                RETURNING quantity`,
+                VALUES(?, ?, ?)
+                ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)`,
             values: [userID, itemCode, quantity]
         };
-        
-        const result = await Database.query(query);
-        const newQty = DatabaseHelper.singleField(result, 'quantity', 0)
+
+        await Database.query(query);
+
+        // MySQL has no RETURNING: read the resulting quantity back.
+        const newQty = (await this.getUserItem(userID, itemCode))?.quantity ?? 0;
 
         // Get the total of that item now.
         const total = await this.count(itemCode);

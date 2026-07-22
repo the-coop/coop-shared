@@ -14,14 +14,14 @@ export default class Election {
 
     static loadHierarchySingleType(type) {
         return DatabaseHelper.singleQuery({
-            text: "SELECT * FROM hierarchy WHERE type = $1",
+            text: "SELECT * FROM hierarchy WHERE type = ?",
             values: [type]
         });
     }
 
     static loadHierarchyEntitiesByType(type) {
         return DatabaseHelper.manyQuery({
-            text: "SELECT * FROM hierarchy WHERE type = $1",
+            text: "SELECT * FROM hierarchy WHERE type = ?",
             values: [type]
         });
     }

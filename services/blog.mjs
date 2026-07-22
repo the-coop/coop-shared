@@ -18,7 +18,7 @@ export default class Blog {
     static loadPostBySlug(slug) {
         return DatabaseHelper.singleQuery({
             name: "load-post-slug", 
-            text: `SELECT * FROM blog_posts WHERE slug = $1`,
+            text: `SELECT * FROM blog_posts WHERE slug = ?`,
             values: [slug]
         });
     }
@@ -26,7 +26,7 @@ export default class Blog {
     static async loadDraftByChannelID(chanID) {
         const draft = await DatabaseHelper.singleQuery({
             name: "load-draft",
-            text: `SELECT * FROM post_drafts WHERE channel_id = $1`,
+            text: `SELECT * FROM post_drafts WHERE channel_id = ?`,
             values: [chanID]
         });
         return draft;

@@ -20,7 +20,7 @@ export default class Projects {
             text: `SELECT * FROM projects
                     JOIN users 
                     ON projects.owner_id = discord_id
-                WHERE slug = $1`,
+                WHERE slug = ?`,
             values: [slug]
         });
     }

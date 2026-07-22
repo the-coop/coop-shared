@@ -11,15 +11,15 @@ export default class AccessCodes {
     // Delete all access codes for a certain user (heavy-handed/overkill for security/safety).
     static delete(discord_id) {
         return Database.query({
-            text: `DELETE FROM temp_login_codes WHERE discord_id = $1`,
+            text: `DELETE FROM temp_login_codes WHERE discord_id = ?`,
             values: [discord_id]
         });
     }
 
     static async flush() {
         const query = {
-            text: `DELETE FROM temp_login_codes 
-                WHERE id IN (SELECT id WHERE expires_at <= extract(epoch from now()))`
+            text: `DELETE FROM temp_login_codes
+                WHERE expires_at <= UNIX_TIMESTAMP()`
         };
         const result = await Database.query(query);
         return result;
@@ -28,8 +28,8 @@ export default class AccessCodes {
     static async getExpired() {
         const query = {
             name: "get-expired-codes",
-            text: `SELECT * FROM temp_login_codes 
-                WHERE expires_at <= extract(epoch from now())
+            text: `SELECT * FROM temp_login_codes
+                WHERE expires_at <= UNIX_TIMESTAMP()
                 ORDER BY expires_at ASC
                 LIMIT 40`
         };
@@ -42,7 +42,7 @@ export default class AccessCodes {
     static async validate(code) {
         // Check code is correct
         const result = await DatabaseHelper.singleQuery({
-            text: `SELECT * FROM temp_login_codes WHERE code = $1`,
+            text: `SELECT * FROM temp_login_codes WHERE code = ?`,
             values: [code]
         });
 
@@ -76,7 +76,7 @@ export default class AccessCodes {
         try {
             await Database.query({
                 text: `INSERT INTO temp_login_codes (discord_id, code, expires_at) 
-                    VALUES ($1, $2, $3)`,
+                    VALUES (?, ?, ?)`,
                 values: [discord_id, code, expiry]
             });
             

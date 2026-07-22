@@ -12,7 +12,7 @@ export default class Users {
     static async count() {
         const result = await DatabaseHelper.singleQuery({
             name: "count-users",
-            text: "SELECT COUNT(*) FROM users"
+            text: "SELECT COUNT(*) AS count FROM users"
         });
         const userCount = result.count;
         return userCount;
@@ -21,7 +21,7 @@ export default class Users {
     static loadSingleConquest(id) {
         return DatabaseHelper.singleQuery({
             name: "get-user-conquest",
-            text: "SELECT discord_id, x, y, z FROM users WHERE discord_id = $1",
+            text: "SELECT discord_id, x, y, z FROM users WHERE discord_id = ?",
             values: [id]
         });
     }
@@ -29,7 +29,7 @@ export default class Users {
 	static async get(id) {
         const query = {
             name: "get-user",
-            text: "SELECT * FROM users WHERE discord_id = $1",
+            text: "SELECT * FROM users WHERE discord_id = ?",
             values: [id]
         };
 
@@ -89,7 +89,7 @@ export default class Users {
                     GROUP BY ba.owner_id
                 ) bases ON users.discord_id = bases.owner_id
 
-                WHERE username LIKE $1
+                WHERE username LIKE ?
             `,
             values: [username]
         });
@@ -149,7 +149,7 @@ export default class Users {
                     GROUP BY ba.owner_id
                 ) bases ON users.discord_id = bases.owner_id
 
-                WHERE discord_id = $1
+                WHERE discord_id = ?
             `,
             values: [discordID]
         };

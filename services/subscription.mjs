@@ -5,7 +5,7 @@ export default class Subscription {
     static async getByEmail(email) {
         return DatabaseHelper.singleQuery({
             name: 'get-subscription-by-email',
-            text: `SELECT * FROM propaganda_subscriptions WHERE email = $1`,
+            text: `SELECT * FROM propaganda_subscriptions WHERE email = ?`,
             values: [email]
         });
     }
@@ -16,7 +16,7 @@ export default class Subscription {
             name: 'create-subscription',
             text: `INSERT INTO propaganda_subscriptions
                 (email, level, owner_id, subscribed_at) 
-                VALUES($1, $2, $3, $4)`,
+                VALUES(?, ?, ?, ?)`,
             values: [email, level, owner, Math.round(Date.now() / 1000)]
         });
         if (typeof creation.rowCount !== 'undefined') {
@@ -29,7 +29,7 @@ export default class Subscription {
         let result = false;
         const query = {
             name: 'unsubscribe-by-email',
-            text: `DELETE FROM propaganda_subscriptions WHERE email = $1`,
+            text: `DELETE FROM propaganda_subscriptions WHERE email = ?`,
             values: [email]
         };
         const response = await Database.query(query);
